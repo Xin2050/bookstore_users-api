@@ -2,28 +2,41 @@ package usersController
 
 import (
 	"bookstore_users-api/src/domain/users"
-	"encoding/json"
+	"bookstore_users-api/src/services"
+	"bookstore_users-api/src/utils/errors"
 	"github.com/gin-gonic/gin"
-	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 func GetUser(c *gin.Context) {
-	c.String(http.StatusNotImplemented, "implement me")
+	userId, userErr:= strconv.ParseInt(c.Param("user_id"),10,64)
+	if userErr != nil {
+		err:= errors.BadRequestError("user id should be a number")
+		c.JSON(err.Status, err)
+		return
+	}
+	user, getErr := services.GetUser(userId)
+	if getErr !=nil {
+		c.JSON(getErr.Status, getErr)
+		return
+	}
+	c.JSON(http.StatusOK, user)
 }
 func SearchUser(c *gin.Context) {
 	c.String(http.StatusNotImplemented, "implement me")
 }
 func CreateUser(c *gin.Context) {
 	var user users.User
-	bytes, err := ioutil.ReadAll(c.Request.Body)
+	if err :=c.ShouldBindJSON(&user);err != nil {
+		restError := errors.BadRequestError(err.Error())
+		c.JSON(restError.Status, restError)
+		return
+	}
+	newUser, err := services.CreateUser(user)
 	if err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error()})
+		c.JSON(err.Status, err)
 		return
 	}
-	if err := json.Unmarshal(bytes, &user); err != nil {
-		c.JSON(http.StatusNotAcceptable, gin.H{"error": err.Error(), "Other": 1234})
-		return
-	}
-	c.JSON(200, &user)
+	c.JSON(http.StatusCreated, newUser)
 }
