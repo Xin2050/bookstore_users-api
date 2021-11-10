@@ -10,7 +10,9 @@ func GetNowString() string {
 
 	return GetNow().Format(apiDateLayout)
 }
-
+func GetNowForMySQL() string {
+	return time.Now().Format(time.RFC3339)
+}
 func GetNow() time.Time {
 	return time.Now().UTC()
 }

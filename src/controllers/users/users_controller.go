@@ -9,15 +9,21 @@ import (
 	"strconv"
 )
 
-func GetUser(c *gin.Context) {
-	userId, userErr:= strconv.ParseInt(c.Param("user_id"),10,64)
+func GetUserId(userIdParam string) (int64, *errors.RestError) {
+	userId, userErr := strconv.ParseInt(userIdParam, 10, 64)
 	if userErr != nil {
-		err:= errors.BadRequestError("user id should be a number")
-		c.JSON(err.Status, err)
+		return -1, errors.BadRequestError("user id should be a number")
+	}
+	return userId, nil
+}
+func GetUser(c *gin.Context) {
+	userId, userErr := GetUserId(c.Param("user_id"))
+	if userErr != nil {
+		c.JSON(userErr.Status, userErr)
 		return
 	}
 	user, getErr := services.GetUser(userId)
-	if getErr !=nil {
+	if getErr != nil {
 		c.JSON(getErr.Status, getErr)
 		return
 	}
@@ -28,7 +34,7 @@ func SearchUser(c *gin.Context) {
 }
 func CreateUser(c *gin.Context) {
 	var user users.User
-	if err :=c.ShouldBindJSON(&user);err != nil {
+	if err := c.ShouldBindJSON(&user); err != nil {
 		restError := errors.BadRequestError(err.Error())
 		c.JSON(restError.Status, restError)
 		return
@@ -39,4 +45,42 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, newUser)
+}
+
+func UpdateUser(c *gin.Context) {
+	userId, userErr := GetUserId(c.Param("user_id"))
+	if userErr != nil {
+		c.JSON(userErr.Status, userErr)
+		return
+	}
+	var user users.User
+
+	if err := c.ShouldBindJSON(&user); err != nil {
+		restError := errors.BadRequestError(err.Error())
+		c.JSON(restError.Status, restError)
+		return
+	}
+	user.Id = userId
+
+	isPartial := c.Request.Method == http.MethodPatch
+	result, err := services.UpdateUser(isPartial, user)
+	if err != nil {
+		c.JSON(err.Status, err)
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+func DeleteUser(c *gin.Context) {
+	userId, userErr := GetUserId(c.Param("user_id"))
+	if userErr != nil {
+		c.JSON(userErr.Status, userErr)
+		return
+	}
+	user := users.User{Id: userId}
+	err := services.DeleteUser(user)
+	if err != nil {
+		c.JSON(err.Status, err)
+		return
+	}
+	c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
 }
