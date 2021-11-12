@@ -9,6 +9,10 @@ import (
 	"strconv"
 )
 
+func TestServiceInterface() {
+	//services.UsersService
+}
+
 func GetUserId(userIdParam string) (int64, *errors.RestError) {
 	userId, userErr := strconv.ParseInt(userIdParam, 10, 64)
 	if userErr != nil {
@@ -22,12 +26,12 @@ func GetUser(c *gin.Context) {
 		c.JSON(userErr.Status, userErr)
 		return
 	}
-	user, getErr := services.GetUser(userId)
+	user, getErr := services.UsersService.GetUser(userId)
 	if getErr != nil {
 		c.JSON(getErr.Status, getErr)
 		return
 	}
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, user.Marshall(c.GetHeader("x-public") == "true"))
 }
 func SearchUser(c *gin.Context) {
 	c.String(http.StatusNotImplemented, "implement me")
@@ -39,7 +43,7 @@ func CreateUser(c *gin.Context) {
 		c.JSON(restError.Status, restError)
 		return
 	}
-	newUser, err := services.CreateUser(user)
+	newUser, err := services.UsersService.CreateUser(user)
 	if err != nil {
 		c.JSON(err.Status, err)
 		return
@@ -63,12 +67,12 @@ func UpdateUser(c *gin.Context) {
 	user.Id = userId
 
 	isPartial := c.Request.Method == http.MethodPatch
-	result, err := services.UpdateUser(isPartial, user)
+	result, err := services.UsersService.UpdateUser(isPartial, user)
 	if err != nil {
 		c.JSON(err.Status, err)
 		return
 	}
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, result.Marshall(c.GetHeader("x-public") == "true"))
 }
 func DeleteUser(c *gin.Context) {
 	userId, userErr := GetUserId(c.Param("user_id"))
@@ -77,10 +81,20 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 	user := users.User{Id: userId}
-	err := services.DeleteUser(user)
+	err := services.UsersService.DeleteUser(user)
 	if err != nil {
 		c.JSON(err.Status, err)
 		return
 	}
 	c.JSON(http.StatusOK, map[string]string{"status": "deleted"})
+}
+func FindUsersByStatus(c *gin.Context) {
+	status := c.Query("status")
+	users, err := services.UsersService.FindUsersByStatus(status)
+	if err != nil {
+		c.JSON(err.Status, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, users.Marshall(c.GetHeader("x-public") == "true"))
 }

@@ -2,13 +2,34 @@ package services
 
 import (
 	"bookstore_users-api/src/domain/users"
+	crypto_utils "bookstore_users-api/src/utils/crypto"
+	date_utils "bookstore_users-api/src/utils/date"
 	"bookstore_users-api/src/utils/errors"
+	mysql_utils "bookstore_users-api/src/utils/mysql"
 )
 
-func CreateUser(user users.User) (*users.User, *errors.RestError) {
+const (
+	StatusActive = "Active"
+)
+
+var (
+	UsersService usersService = usersService{}
+)
+
+type usersService struct {
+}
+
+func (s *usersService) CreateUser(user users.User) (*users.User, *errors.RestError) {
 	if err := user.Validate(); err != nil {
 		return nil, err
 	}
+	user.DateCreated = date_utils.GetNowForMySQL()
+	user.Status = StatusActive
+	hashedPwd, err := crypto_utils.HashPassword(user.Password)
+	if err != nil {
+		return nil, mysql_utils.ParseError(err)
+	}
+	user.Password = hashedPwd
 	if err := user.Save(); err != nil {
 		return nil, err
 	}
@@ -16,7 +37,7 @@ func CreateUser(user users.User) (*users.User, *errors.RestError) {
 	return &user, nil
 }
 
-func GetUser(userId int64) (*users.User, *errors.RestError) {
+func (s *usersService) GetUser(userId int64) (*users.User, *errors.RestError) {
 	result := &users.User{Id: userId}
 	if err := result.Get(); err != nil {
 		return nil, err
@@ -24,12 +45,12 @@ func GetUser(userId int64) (*users.User, *errors.RestError) {
 	return result, nil
 }
 
-func UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestError) {
-	current, err := GetUser(user.Id)
+func (s *usersService) UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestError) {
+	current, err := s.GetUser(user.Id)
 	if err != nil {
 		return nil, err
 	}
-	if err := user.Validate(); err != nil {
+	if err := user.ValidateWithoutPassword(); err != nil {
 		return nil, err
 	}
 	if isPartial {
@@ -54,8 +75,8 @@ func UpdateUser(isPartial bool, user users.User) (*users.User, *errors.RestError
 	}
 	return current, nil
 }
-func DeleteUser(user users.User) *errors.RestError {
-	_, err := GetUser(user.Id)
+func (s *usersService) DeleteUser(user users.User) *errors.RestError {
+	_, err := s.GetUser(user.Id)
 	if err != nil {
 		return err
 	}
@@ -64,4 +85,9 @@ func DeleteUser(user users.User) *errors.RestError {
 		return delErr
 	}
 	return nil
+}
+func (s *usersService) FindUsersByStatus(status string) (users.Users, *errors.RestError) {
+	user := &users.User{}
+	return user.FindUsersByStatus(status)
+
 }
