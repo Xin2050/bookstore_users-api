@@ -13,10 +13,17 @@ const (
 )
 
 var (
-	UsersService usersService = usersService{}
+	UsersService usersServiceInterface = &usersService{}
 )
 
-type usersService struct {
+type usersService struct{}
+
+type usersServiceInterface interface {
+	CreateUser(users.User) (*users.User, *errors.RestError)
+	GetUser(int64) (*users.User, *errors.RestError)
+	FindUsersByStatus(string) (users.Users, *errors.RestError)
+	UpdateUser(bool, users.User) (*users.User, *errors.RestError)
+	DeleteUser(users.User) *errors.RestError
 }
 
 func (s *usersService) CreateUser(user users.User) (*users.User, *errors.RestError) {
