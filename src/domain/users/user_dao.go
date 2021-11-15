@@ -2,8 +2,8 @@ package users
 
 import (
 	"bookstore_users-api/src/datasources/mysql/users_db"
+	"bookstore_users-api/src/logger"
 	"bookstore_users-api/src/utils/errors"
-	mysql_utils "bookstore_users-api/src/utils/mysql"
 	"fmt"
 )
 
@@ -18,12 +18,14 @@ const (
 func (user *User) Get() *errors.RestError {
 	stmt, err := users_db.Client.Prepare(queryGetUser)
 	if err != nil {
-		return errors.InternalServerError(err.Error())
+		logger.Error("error when trying to prepare get user statement", err)
+		return errors.InternalServerError("database error")
 	}
 	defer stmt.Close()
 	err = stmt.QueryRow(user.Id).Scan(&user.Id, &user.FirstName, &user.LastName, &user.Email, &user.DateCreated, &user.Status)
 	if err != nil {
-		return mysql_utils.ParseError(err)
+		logger.Error("error when trying to get user by id", err)
+		return errors.InternalServerError("database error")
 	}
 
 	return nil
@@ -32,18 +34,21 @@ func (user *User) Get() *errors.RestError {
 func (user *User) Save() *errors.RestError {
 	stmt, err := users_db.Client.Prepare(queryInsertUser)
 	if err != nil {
-		return mysql_utils.ParseError(err)
+		logger.Error("error when trying to prepare save user statement", err)
+		return errors.InternalServerError("database error")
 	}
 
 	defer stmt.Close()
 	insertRs, saveErr := stmt.Exec(user.FirstName, user.LastName, user.Email,
 		user.Password, user.Status, user.DateCreated)
 	if saveErr != nil {
-		return mysql_utils.ParseError(saveErr)
+		logger.Error("error when trying to save user statement", err)
+		return errors.InternalServerError("database error")
 	}
 	userId, err := insertRs.LastInsertId()
 	if err != nil {
-		return mysql_utils.ParseError(saveErr)
+		logger.Error("error when trying to get user id after saved user", err)
+		return errors.InternalServerError("database error")
 	}
 	user.Id = userId
 
@@ -53,12 +58,14 @@ func (user *User) Save() *errors.RestError {
 func (user *User) Update() *errors.RestError {
 	stmt, err := users_db.Client.Prepare(queryUpdateUser)
 	if err != nil {
-		return mysql_utils.ParseError(err)
+		logger.Error("error when trying to prepare update user statement", err)
+		return errors.InternalServerError("database error")
 	}
 	defer stmt.Close()
 	_, updateErr := stmt.Exec(user.FirstName, user.LastName, user.Email, user.Id)
 	if updateErr != nil {
-		return mysql_utils.ParseError(updateErr)
+		logger.Error("error when trying to update user statement", err)
+		return errors.InternalServerError("database error")
 	}
 	return nil
 }
@@ -66,12 +73,14 @@ func (user *User) Update() *errors.RestError {
 func (user *User) Delete() *errors.RestError {
 	stmt, err := users_db.Client.Prepare(queryDeleteUser)
 	if err != nil {
-		return mysql_utils.ParseError(err)
+		logger.Error("error when trying to prepare delete user statement", err)
+		return errors.InternalServerError("database error")
 	}
 	defer stmt.Close()
 	_, delErr := stmt.Exec(user.Id)
 	if delErr != nil {
-		return mysql_utils.ParseError(delErr)
+		logger.Error("error when trying to delete user statement", err)
+		return errors.InternalServerError("database error")
 	}
 	return nil
 }
@@ -79,12 +88,14 @@ func (user *User) Delete() *errors.RestError {
 func (user *User) FindUsersByStatus(status string) ([]User, *errors.RestError) {
 	stmt, err := users_db.Client.Prepare(queryGetUsersByStatus)
 	if err != nil {
-		return nil, mysql_utils.ParseError(err)
+		logger.Error("error when trying to prepare find user by id statement", err)
+		return nil, errors.InternalServerError("database error")
 	}
 	defer stmt.Close()
 	rows, err := stmt.Query(status)
 	if err != nil {
-		return nil, mysql_utils.ParseError(err)
+		logger.Error("error when trying to find user by id statement", err)
+		return nil, errors.InternalServerError("database error")
 	}
 	defer rows.Close()
 	results := make([]User, 0)
@@ -98,7 +109,8 @@ func (user *User) FindUsersByStatus(status string) ([]User, *errors.RestError) {
 			&user.DateCreated,
 			&user.Status,
 		); err != nil {
-			return nil, mysql_utils.ParseError(err)
+			logger.Error("error when trying to get user field from search results", err)
+			return nil, errors.InternalServerError("database error")
 		}
 		results = append(results, user)
 	}

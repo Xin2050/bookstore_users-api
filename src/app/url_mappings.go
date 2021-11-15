@@ -3,6 +3,7 @@ package app
 import (
 	pingController "bookstore_users-api/src/controllers/ping"
 	usersController "bookstore_users-api/src/controllers/users"
+	"bookstore_users-api/src/logger"
 )
 
 func mapUrls() {
@@ -17,4 +18,5 @@ func mapUrls() {
 	router.DELETE("/users/:user_id", usersController.DeleteUser)
 
 	router.GET("/internal/users/search", usersController.FindUsersByStatus)
+	logger.Info("Routers were loaded.")
 }

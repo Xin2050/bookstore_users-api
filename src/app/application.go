@@ -1,6 +1,9 @@
 package app
 
-import "github.com/gin-gonic/gin"
+import (
+	"bookstore_users-api/src/logger"
+	"github.com/gin-gonic/gin"
+)
 
 var (
 	router = gin.Default()
@@ -8,5 +11,6 @@ var (
 
 func StartApplication() {
 	mapUrls()
+	logger.Info("application is Running on port 3000.")
 	router.Run(":3000")
 }
